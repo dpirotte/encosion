@@ -10,6 +10,7 @@ require 'json'
 require 'yaml'
 
 # internal
+require 'encosion/base'
 require 'encosion/video'
 require 'encosion/playlist'
 require 'encosion/exceptions'

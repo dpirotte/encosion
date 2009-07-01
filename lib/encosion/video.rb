@@ -1,7 +1,12 @@
 module Encosion
   
-  class Video
+  class Video < Base
     
+    SERVER = 'api.brightcove.com'
+    PORT = 80
+    SECURE = false
+    READ_PATH = '/services/library'
+    WRITE_PATH = '/services/post'
     ENUMS = { :economics => { :free => 'FREE', :ad_supported => 'AD_SUPPORTED'}}
     
     attr_accessor(:name, 
@@ -25,28 +30,71 @@ module Encosion
                   :plays_trailing_week)
     
     
-    # Creates a new Video object from a Ruby hash (used to create a video from a parsed API call)
-    def self.parse(obj)
-      args = {:id => obj['id'].to_i
-              :name => obj['name']
-              :short_description => obj['shortDescription']
-              :long_description => obj['longDescription']
-              :creation_date => Time.at(obj['creationDate'].to_i/1000)
-              :published_date => Time.at(obj['publishedDate'].to_i/1000)
-              :last_modified_date => Time.at(obj['lastModifiedDate'].to_i/1000)
-              :link_url => obj['linkURL']
-              :link_text => obj['linkText']
-              :tags => obj['tags']
-              :video_still_url => obj['videoStillURL']
-              :thumbnail_url => obj['thumbnailURL']
-              :reference_id => obj['referenceID']
-              :length => obj['length'].to_i
-              :economics => ENUMS[:economics].find { |key,value| value == obj['economics'] }.first
-              :plays_total => obj['playsTotal'].to_i
-              :plays_trailing_week => obj['playsTrailingWeek'].to_i }
-      return self.new(args)
+    class << self
+      
+      # Find a video from a single or array of ids
+      def find_from_ids(ids, options)
+        expects_array = ids.first.kind_of?(Array)
+        return ids.first if expects_array && ids.first.empty?
+
+        ids = ids.flatten.compact.uniq
+
+        case ids.size
+          when 0
+            raise VideoNotFound, "Couldn't find video without an ID"
+          when 1
+            result = find_one(ids.first, options)
+            expects_array ? [ result ] : result
+          else
+            find_some(ids, options)
+        end
+      end
+      
+      
+      # Find some videos by ids
+      def find_one(id, options)
+        options.merge!({:video_id => id})
+        get(SERVER,PORT,READ_PATH,SECURE,'find_video_by_id',options)
+      end
+      
+      
+      # Find mutliple videos by id
+      def find_some(ids, options)
+        options.merge!({:video_ids => ids.join(',')})
+        get(SERVER,PORT,READ_PATH,SECURE,'find_videos_by_ids',options)
+      end
+      
+      
+      # Find all videos
+      def find_all(options)
+        get(SERVER,PORT,READ_PATH,SECURE,'find_all_videos',options)
+      end
+
+      
+      # Creates a new Video object from a Ruby hash (used to create a video from a parsed API call)
+      def parse(obj)
+        args = {:id => obj['id'].to_i,
+                :name => obj['name'],
+                :short_description => obj['shortDescription'],
+                :long_description => obj['longDescription'],
+                :creation_date => Time.at(obj['creationDate'].to_i/1000),
+                :published_date => Time.at(obj['publishedDate'].to_i/1000),
+                :last_modified_date => Time.at(obj['lastModifiedDate'].to_i/1000),
+                :link_url => obj['linkURL'],
+                :link_text => obj['linkText'],
+                :tags => obj['tags'],
+                :video_still_url => obj['videoStillURL'],
+                :thumbnail_url => obj['thumbnailURL'],
+                :reference_id => obj['referenceID'],
+                :length => obj['length'].to_i,
+                :economics => obj['economics'] ? ENUMS[:economics].find { |key,value| value == obj['economics'] }.first : nil,
+                :plays_total => obj['playsTotal'].to_i,
+                :plays_trailing_week => obj['playsTrailingWeek'].to_i }
+        return self.new(args)
+      end
+      
     end
-    
+        
     
     def initialize(args)
       @id = args[:id]
@@ -91,23 +139,14 @@ module Encosion
     
     # Outputs the video object into Brightcove's expected format
     def to_brightcove
-      { 'id' => @id,
-        'name' => @name,
+      { 'name' => @name,
         'shortDescription' => @short_description,
         'longDescription' => @long_description,
-        'creationDate' => @creation_date,
-        'publishedDate' => @published_date,
-        'lastModifiedDate' => @last_modified_date,
         'linkURL' => @link_url,
         'linkText' => @link_text,
         'tags' => @tags,
-        'videoStillURL' => @video_still_url,
-        'thumbnailURL' => @thumbnail_url,
         'referenceId' => @reference_id,
-        'length' => @length,
-        'economics' => ENUM[:economics][@economics],
-        'playsTotal' => @plays_total,
-        'playsTrailingWeek' => @plays_trailing_week }
+        'economics' => ENUMS[:economics][@economics] }.to_json
     end
     
     def encosion=(sym)
@@ -118,6 +157,10 @@ module Encosion
       end
     end
     
+  end
+  
+  # Raised when asked to find a video but not given enough info to do so
+  class VideoNotFound < Encosion::EncosionError
   end
   
 end

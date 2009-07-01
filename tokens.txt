@@ -2,3 +2,13 @@
 <add key="BrightCoveBaseWriteUrl" value="http://api.brightcove.com/services/post" />
 <add key="BrightCoveReadToken" value="x5VgEdjdYksNTfP57sHYB331bXnAVl9xgK6hcevAQLY." />
 <add key="BrightCoveWriteToken" value="_eFCYhrtNm-q7u_e6ZbjPKdTl-A6xw6sC2fo1iO8Y1V_d3dMnXnVOA.." />
+
+
+
+
+# correct way to post a video
+url = 'http://api.brightcove.com/services/post'
+body = { 'body' => { 'method' => 'create_video', 'params' => { 'video' => { 'name' => 'Upload API test', 'referenceId' => 'activecasting_3', 'tags' => ['activecasting'], 'shortDescription' => 'Test upload from Media API' }, 'token' => '_eFCYhrtNm-q7u_e6ZbjPKdTl-A6xw6sC2fo1iO8Y1V_d3dMnXnVOA..' }}, 'file' => File.new('test/movie.mov') }
+response = HTTPClient.post url, body
+
+
