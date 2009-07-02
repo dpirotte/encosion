@@ -10,6 +10,7 @@ begin
     gem.homepage = "http://github.com/cannikin/encosion"
     gem.authors = ["Rob Cameron"]
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
+    gem.add_dependency('httpclient', '>= 2.1.5.2')
   end
 
 rescue LoadError
