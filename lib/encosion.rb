@@ -17,7 +17,7 @@ require 'encosion/exceptions'
 
 module Encosion
   
-  VERSION = '0.1.0'
+  VERSION = '0.1.1'
   LOGGER = Logger.new(STDOUT)
   
   def self.new(*args)
