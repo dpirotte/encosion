@@ -13,13 +13,27 @@ module Encosion
   class MissingToken < EncosionError
   end
   
+  # Raised when some parameter is missing that we need in order to do a search
+  class AssetNotFound < EncosionError
+  end
+  
   # Raised when Brightcove doesn't like the call that was made for whatever reason
   class BrightcoveException < EncosionError
   end
   
+  # Raised when Brightcove doesn't like the call that was made for whatever reason
+  class NoFile < EncosionError
+  end
+  
+  
   # The base for all Encosion objects
   class Base
     
+    attr_accessor :read_token, :write_token
+
+    #
+    # Class methods
+    #
     class << self
       
       # Does a GET to search photos and other good stuff
@@ -30,55 +44,78 @@ module Encosion
         else        find_from_ids(args,options)
         end
       end
-      
-      # TODO: Add convience methods for Base.first, Base.all, etc.
+        
+      # This is an alias for find(:all)
+      def all(*args)
+        find(:all, *args)
+      end    
 
-      private
+      protected
+        
       
+        # Pulls any Hash off the end of an array of arguments and returns it
         def extract_options(opts)
           opts.last.is_a?(::Hash) ? opts.pop : {}
         end
 
-        def find_all(*args)
-          # Class should override this with the method to find something by its ID
-        end
 
-        def find_from_ids(args,options)
-          # Class should override this with the method to find something by its ID
-        end
+        # Find an asset from a single or array of ids
+        def find_from_ids(ids, options)
+          expects_array = ids.first.kind_of?(Array)
+          return ids.first if expects_array && ids.first.empty?
 
-        def method_missing(command, *args)
-          case command.to_s
-          when /^find_(all_by|by)_([_a-zA-Z]\w*)/
-            finder = $1
-            name = $2
+          ids = ids.flatten.compact.uniq
+
+          case ids.size
+            when 0
+              raise AssetNotFound, "Couldn't find #{self.class} without an ID"
+            when 1
+              result = find_one(ids.first, options)
+              expects_array ? [ result ] : result
+            else
+              find_some(ids, options)
           end
-          @attribute_name = name
         end
         
-        # Performs the HTTP call
+        
+        # Performs an HTTP GET
         def get(server,port,path,secure,command,options)
-          http = Net::HTTP.new(server, port)
-          # http.use_ssl = secure
+          http = HTTPClient.new
+          url = secure ? 'https://' : 'http://'
+          url += "#{server}:#{port}#{path}"
+          
+          options.merge!({'command' => command })
           query_string = options.collect { |key,value| "#{key.to_s}=#{value.to_s}" }.join('&')
-          response, data = http.get("#{path}?command=#{command}&#{query_string}")
-          results = data.strip == 'null' ? nil : JSON.parse(data)   # if the call returns 'null' then there were no valid results
-          error_check(response,results)
-          return parse_response(results)
+          
+          response = http.get(url, query_string)
+          
+          body = response.body.content.strip == 'null' ? nil : JSON.parse(response.body.content.strip)   # if the call returns 'null' then there were no valid results
+          header = response.header
+          
+          error_check(header,body)
+
+          return body
         end
 
-        # Parses the results and returns either a single instance or array of instances depending on what is queried
-        def parse_response(results)
-          unless results.nil?
-            if results.has_key? 'items'
-              return results['items'].collect { |item| self.parse(item) }
-            else
-              return self.parse(results)       # single instance
+        
+        # Checks the HTTP response and handles any errors
+        def error_check(header,body)
+          if header.status_code == 200
+            return true if body.nil?
+            puts body['error']
+            if body.has_key? 'error' && !body['error'].nil?
+              message = "Brightcove responded with an error: #{body['error']} (code #{body['code']})"
+              body['errors'].each do |error| 
+                message += "\n#{error.values.first} (code #{error.values.last})"
+              end if body.has_key? 'errors'
+              raise BrightcoveException, message
             end
           else
-            return results
+            # should only happen if the Brightcove API is unavailable (even BC errors return a 200)
+            raise BrightcoveException, body + " (status code: #{header.status_code})"
           end
         end
+        
 
         # Turns a hash into a query string and appends the token
         def queryize_args(args, type)
@@ -92,29 +129,52 @@ module Encosion
           end
           return args.collect { |key,value| "#{key.to_s}=#{value.to_s}" }.join('&')
         end
-
-
-        # Checks the HTTP resonse and handles any errors
-        def error_check(response,results)
-          if response.code == '200'
-            return true if results.nil?
-            if results.has_key? 'error'
-              message = "Brightcove responded with an error: #{results['error']} (code #{results['code']})"
-              results['errors'].each do |error| 
-                message += "\n#{error.values.first} (code #{error.values.last})"
-              end if results.has_key? 'errors'
-              raise BrightcoveException, message
-            end
-          else
-            raise BrightcoveException, response.body + " (status code: #{response.code})"
-          end
-        end
       
     end
     
-    # Does a POST to save a video to the server
-    def save()
-    end
+    
+    #
+    # Instance methods
+    #
+    private
+      # Performs an HTTP POST
+      def post(server,port,path,secure,command,options,instance)
+        http = HTTPClient.new
+        url = secure ? 'https://' : 'http://'
+        url += "#{server}:#{port}#{path}"
+
+        content = { 'json' => { 'method' => command, 'params' => options }.to_json }    # package up the variables as a JSON-RPC string
+        content.merge!({ 'file' => instance.file }) if instance.file                    # and add a file if there is one
+
+        response = http.post(url, content)
+        # get the header and body for error checking
+        body = JSON.parse(response.body.content.strip)
+        header = response.header
+
+        error_check(header,body)
+        # if we get here then no exceptions were raised
+        return body
+      end
+      
+      
+      # TODO: shouldn't need to duplicate this method here, some way to call the class method
+      # Checks the HTTP response and handles any errors
+      def error_check(header,body)
+        if header.status_code == 200
+          return true if body.nil?
+          puts body['error']
+          if body.has_key? 'error' && !body['error'].nil?
+            message = "Brightcove responded with an error: #{body['error']} (code #{body['code']})"
+            body['errors'].each do |error| 
+              message += "\n#{error.values.first} (code #{error.values.last})"
+            end if body.has_key? 'errors'
+            raise BrightcoveException, message
+          end
+        else
+          # should only happen if the Brightcove API is unavailable (even BC errors return a 200)
+          raise BrightcoveException, body + " (status code: #{header.status_code})"
+        end
+      end
     
   end
   
