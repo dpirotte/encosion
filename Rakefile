@@ -1,13 +1,56 @@
+require 'rubygems'
+require 'rake'
+
 begin
   require 'jeweler'
-  Jeweler::Tasks.new do |gemspec|
-    gemspec.name = "the-perfect-gem"
-    gemspec.summary = "TODO"
-    gemspec.email = "josh@technicalpickles.com"
-    gemspec.homepage = "http://github.com/technicalpickles/the-perfect-gem"
-    gemspec.description = "TODO"
-    gemspec.authors = ["Josh Nichols"]
+  Jeweler::Tasks.new do |gem|
+    gem.name = "encosion"
+    gem.summary = %Q{TODO}
+    gem.email = "cannikinn@gmail.com"
+    gem.homepage = "http://github.com/cannikin/encosion"
+    gem.authors = ["Rob Cameron"]
+    # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
+  end
+
+rescue LoadError
+  puts "Jeweler (or a dependency) not available. Install it with: sudo gem install jeweler"
+end
+
+require 'rake/testtask'
+Rake::TestTask.new(:test) do |test|
+  test.libs << 'lib' << 'test'
+  test.pattern = 'test/**/*_test.rb'
+  test.verbose = true
+end
+
+begin
+  require 'rcov/rcovtask'
+  Rcov::RcovTask.new do |test|
+    test.libs << 'test'
+    test.pattern = 'test/**/*_test.rb'
+    test.verbose = true
   end
 rescue LoadError
-  puts "Jeweler not available. Install it with: sudo gem install technicalpickles-jeweler -s http://gems.github.com"
+  task :rcov do
+    abort "RCov is not available. In order to run rcov, you must: sudo gem install spicycode-rcov"
+  end
 end
+
+
+task :default => :test
+
+require 'rake/rdoctask'
+Rake::RDocTask.new do |rdoc|
+  if File.exist?('VERSION.yml')
+    config = YAML.load(File.read('VERSION.yml'))
+    version = "#{config[:major]}.#{config[:minor]}.#{config[:patch]}"
+  else
+    version = ""
+  end
+
+  rdoc.rdoc_dir = 'rdoc'
+  rdoc.title = "encosion #{version}"
+  rdoc.rdoc_files.include('README*')
+  rdoc.rdoc_files.include('lib/**/*.rb')
+end
+
