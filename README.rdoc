@@ -1,1 +1,67 @@
 Encosion (en-co-shen) is a Ruby library for working with Brightcove's Media API.
+
+= Installation
+
+To get the gem:
+  gem sources -a http://gems.github.com
+  sudo gem install cannikin-encosion
+  
+= Usage
+
+Encosion has several class methods that are similar to those found in ActiveRecord
+for finding records. You'll pass a hash of options which correspond to those expected
+by Brightcove (see http://docs.brightcove.com/en/media/). All calls will require you
+to include either your read or write token depending on whether you are using the
+read or write methods.
+
+== Read Methods
+
+  require 'rubygems'
+  require 'encosion'
+  
+  # find all videos, 25 at a time, and return the first page
+  videos = Encosion::Video.find(:all, :token => '123abc', :page_size => 25, :page_number => 1)
+  
+  # find a single video by Brightcove video id
+  video = Encosion::Video.find(12345, :token => '123abc')
+  
+  # find several videos by their Brightcove video ids
+  videos = Encosion::Video.find(12345, 67890, 24680, :token => '123abc')
+  
+  # find videos by your own reference id
+  video = Encosion::Video.find_by_reference_id('our_internal_id', :token => '123abc')
+  
+See Encosion::Video for all the available find methods and their variants.
+
+== Write Methods
+
+To write a video to Brightcove you will instantiate Encosion::Video, set a few required fields
+and then save it:
+
+  require 'rubygems'
+  require 'encosion'
+  
+  new_video = Encosion::Video.new(:file => File.new('/path/to/file'), :name => "My Awesome Video", :short_description => "A video of some awesome happenings", :tags => ['awesome','sweet'])
+  brightcove_id = new_video.save(:token => '123abc')
+  
+The save() method returns Brightcove's ID for the video (assuming the save was successful).
+  
+Brightcove requires a name and short description before it will let you save a video. The fields 
+that you can set are those that Brightcove considers writable:
+              
+* name (string)
+* short_description (string)
+* long_description (string)
+* link_url (string)
+* link_text (string)
+* tags (array of strings)
+* reference_id (string)
+* economics (enumerable, either :free or :ad_supported)
+
+And of course the video file itself.
+
+= To Do
+
+* Implement the remaining Video write methods: update_video, delete_video, share_video, get_upload_status, add_image
+* Implement the Playlist API read/write methods
+* Create a persistent config store so you can set the tokens once instead of on each method call

@@ -38,8 +38,8 @@ module Encosion
       # Find a video by reference_id. Invokes Brightcove Media API command 'find_video_by_reference_id' or
       # 'find_videos_by_reference_ids' depending on whether you call one or multiple ids
       #
-      #   Encosion::Video.find_by_reference_id('mycompany_1',:read_token => 'asdf')
-      #   Encosion::Video.find_by_reference_id('mycompany_1','mycompany_2','mycompany_3',:read_token => 'asdf')
+      #   Encosion::Video.find_by_reference_id('mycompany_1',:token => 'asdf')
+      #   Encosion::Video.find_by_reference_id('mycompany_1','mycompany_2','mycompany_3',:token => 'asdf')
       
       def find_by_reference_id(*args)
         options = extract_options(args)
@@ -61,7 +61,7 @@ module Encosion
       
       # Find a video by text search. Invokes Brightcove Media API command 'find_videos_by_text'
       #
-      #   Encosion::Video.find_by_text('funny videos',:read_token => 'asdf')
+      #   Encosion::Video.find_by_text('funny videos',:token => 'asdf')
       
       def find_by_text(*args)
         options = extract_options(args)
@@ -75,7 +75,7 @@ module Encosion
 
       # Find videos related to the given video_id. Invokes Brightcove Media API command 'find_related_videos'
       #
-      #   Encosion::Video.find_related(123456,:read_token => 'asdf')
+      #   Encosion::Video.find_related(123456,:token => 'asdf')
       
       def find_related(*args)
         options = extract_options(args)
@@ -87,7 +87,7 @@ module Encosion
       
       # Find a video by tag search. Invokes Brightcove Media API command 'find_videos_by_tags'
       #
-      #   Encosion::Video.find_by_tags('bloopers','gagreel','funny',:read_token => 'asdf')
+      #   Encosion::Video.find_by_tags('bloopers','gagreel','funny',:token => 'asdf')
       
       def find_by_tags(*args)
         options = extract_options(args)
@@ -178,10 +178,13 @@ module Encosion
     
     
     # Saves a video to Brightcove. Returns the Brightcove ID for the video that was just uploaded.
-    def save(options={})
+    #   new_video = Encosion::Video.new(:file => File.new('/path/to/file'), :name => "My Awesome Video", :short_description => "A video of some awesome happenings", :tags => ['awesome','sweet'])
+    #   brightcove_id = new_video.save(:token => '123abc')
+    
+    def save(args={})
       # check to make sure we have everything needed for a create_video call
       raise NoFile, "You need to attach a file to this video before you can upload it: Video.file = File.new('/path/to/file')" if @file.nil?
-      options.merge!({ 'video' => self.to_brightcove })   # take the parameters of this video and make them a valid video object for upload
+      options = args.merge({ 'video' => self.to_brightcove })   # take the parameters of this video and make them a valid video object for upload
       response = post(SERVER,PORT,WRITE_PATH,SECURE,'create_video',options,self)
       return response['result']    # returns the Brightcove ID of the video that was just uploaded
     end

@@ -5,12 +5,13 @@ begin
   require 'jeweler'
   Jeweler::Tasks.new do |gem|
     gem.name = "encosion"
-    gem.summary = %Q{TODO}
+    gem.summary = %q{Ruby library for working with the Brightcove API}
     gem.email = "cannikinn@gmail.com"
     gem.homepage = "http://github.com/cannikin/encosion"
     gem.authors = ["Rob Cameron"]
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
     gem.add_dependency('httpclient', '>= 2.1.5.2')
+    gem.add_dependency('json', '>= 1.1.7')
   end
 
 rescue LoadError
