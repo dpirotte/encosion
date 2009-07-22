@@ -31,6 +31,10 @@ read or write methods.
   # find videos by your own reference id
   video = Encosion::Video.find_by_reference_id('our_internal_id', :token => '123abc')
   
+  # check the status of a video (technically this uses the write API so you need to provide your write token)
+  status = Encosion::Video.status(12345, :token => '123abc') # finds by Brightcove video_id
+  status = Encosion::Video.status('our_internal_id', :token => '123abc') # finds by reference_id (string instead of integer)
+  
 See Encosion::Video for all the available find methods and their variants.
 
 == Write Methods
@@ -62,6 +66,6 @@ And of course the video file itself.
 
 = To Do
 
-* Implement the remaining Video write methods: update_video, delete_video, share_video, get_upload_status, add_image
+* Implement the remaining Video write methods: update_video, delete_video, share_video, add_image
 * Implement the Playlist API read/write methods
 * Create a persistent config store so you can set the tokens once instead of on each method call
