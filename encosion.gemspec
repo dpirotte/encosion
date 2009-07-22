@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |s|
   s.name = %q{encosion}
-  s.version = "0.1.4"
+  s.version = "0.2.0"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Rob Cameron"]
@@ -19,6 +19,7 @@ Gem::Specification.new do |s|
      "README.rdoc",
      "Rakefile",
      "VERSION",
+     "encosion.gemspec",
      "lib/encosion.rb",
      "lib/encosion/base.rb",
      "lib/encosion/cue_point.rb",
@@ -38,6 +39,7 @@ Gem::Specification.new do |s|
   s.summary = %q{Ruby library for working with the Brightcove API}
   s.test_files = [
     "test/encosion_test.rb",
+     "test/random.rb",
      "test/test_helper.rb"
   ]
 
