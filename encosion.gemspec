@@ -39,7 +39,6 @@ Gem::Specification.new do |s|
   s.summary = %q{Ruby library for working with the Brightcove API}
   s.test_files = [
     "test/encosion_test.rb",
-     "test/random.rb",
      "test/test_helper.rb"
   ]
 
