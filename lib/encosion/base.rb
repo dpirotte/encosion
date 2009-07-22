@@ -48,11 +48,69 @@ module Encosion
       # This is an alias for find(:all)
       def all(*args)
         find(:all, *args)
-      end    
+      end
+
+      # Performs an HTTP GET
+      def get(server,port,path,secure,command,options)
+        http = HTTPClient.new
+        url = secure ? 'https://' : 'http://'
+        url += "#{server}:#{port}#{path}"
+        
+        options.merge!({'command' => command })
+        query_string = options.collect { |key,value| "#{key.to_s}=#{value.to_s}" }.join('&')
+        
+        response = http.get(url, query_string)
+        
+        body = response.body.content.strip == 'null' ? nil : JSON.parse(response.body.content.strip)   # if the call returns 'null' then there were no valid results
+        header = response.header
+        
+        error_check(header,body)
+        
+        # puts "url: #{url}\nquery_string:#{query_string}"
+
+        return body
+      end
+      
+      # Performs an HTTP POST
+      def post(server,port,path,secure,command,options,instance)
+        http = HTTPClient.new
+        url = secure ? 'https://' : 'http://'
+        url += "#{server}:#{port}#{path}"
+
+        content = { 'json' => { 'method' => command, 'params' => options }.to_json }    # package up the variables as a JSON-RPC string
+        content.merge!({ 'file' => instance.file }) if instance.respond_to?('file')                    # and add a file if there is one
+
+        response = http.post(url, content)
+        # get the header and body for error checking
+        body = JSON.parse(response.body.content.strip)
+        header = response.header
+
+        error_check(header,body)
+        # if we get here then no exceptions were raised
+        return body
+      end
+      
+      # Checks the HTTP response and handles any errors
+      def error_check(header,body)
+        if header.status_code == 200
+          return true if body.nil?
+          puts body['error']
+          if body.has_key? 'error' && !body['error'].nil?
+            message = "Brightcove responded with an error: #{body['error']} (code #{body['code']})"
+            body['errors'].each do |error| 
+              message += "\n#{error.values.first} (code #{error.values.last})"
+            end if body.has_key? 'errors'
+            raise BrightcoveException, message
+          end
+        else
+          # should only happen if the Brightcove API is unavailable (even BC errors return a 200)
+          raise BrightcoveException, body + " (status code: #{header.status_code})"
+        end
+      end
+      
 
       protected
         
-      
         # Pulls any Hash off the end of an array of arguments and returns it
         def extract_options(opts)
           opts.last.is_a?(::Hash) ? opts.pop : {}
@@ -77,45 +135,6 @@ module Encosion
           end
         end
         
-        
-        # Performs an HTTP GET
-        def get(server,port,path,secure,command,options)
-          http = HTTPClient.new
-          url = secure ? 'https://' : 'http://'
-          url += "#{server}:#{port}#{path}"
-          
-          options.merge!({'command' => command })
-          query_string = options.collect { |key,value| "#{key.to_s}=#{value.to_s}" }.join('&')
-          
-          response = http.get(url, query_string)
-          
-          body = response.body.content.strip == 'null' ? nil : JSON.parse(response.body.content.strip)   # if the call returns 'null' then there were no valid results
-          header = response.header
-          
-          error_check(header,body)
-
-          return body
-        end
-
-        
-        # Checks the HTTP response and handles any errors
-        def error_check(header,body)
-          if header.status_code == 200
-            return true if body.nil?
-            puts body['error']
-            if body.has_key? 'error' && !body['error'].nil?
-              message = "Brightcove responded with an error: #{body['error']} (code #{body['code']})"
-              body['errors'].each do |error| 
-                message += "\n#{error.values.first} (code #{error.values.last})"
-              end if body.has_key? 'errors'
-              raise BrightcoveException, message
-            end
-          else
-            # should only happen if the Brightcove API is unavailable (even BC errors return a 200)
-            raise BrightcoveException, body + " (status code: #{header.status_code})"
-          end
-        end
-        
 
         # Turns a hash into a query string and appends the token
         def queryize_args(args, type)
@@ -132,49 +151,6 @@ module Encosion
       
     end
     
-    
-    #
-    # Instance methods
-    #
-    private
-      # Performs an HTTP POST
-      def post(server,port,path,secure,command,options,instance)
-        http = HTTPClient.new
-        url = secure ? 'https://' : 'http://'
-        url += "#{server}:#{port}#{path}"
-
-        content = { 'json' => { 'method' => command, 'params' => options }.to_json }    # package up the variables as a JSON-RPC string
-        content.merge!({ 'file' => instance.file }) if instance.file                    # and add a file if there is one
-
-        response = http.post(url, content)
-        # get the header and body for error checking
-        body = JSON.parse(response.body.content.strip)
-        header = response.header
-
-        error_check(header,body)
-        # if we get here then no exceptions were raised
-        return body
-      end
-      
-      
-      # TODO: shouldn't need to duplicate this method here, some way to call the class method
-      # Checks the HTTP response and handles any errors
-      def error_check(header,body)
-        if header.status_code == 200
-          return true if body.nil?
-          puts body['error']
-          if body.has_key? 'error' && !body['error'].nil?
-            message = "Brightcove responded with an error: #{body['error']} (code #{body['code']})"
-            body['errors'].each do |error| 
-              message += "\n#{error.values.first} (code #{error.values.last})"
-            end if body.has_key? 'errors'
-            raise BrightcoveException, message
-          end
-        else
-          # should only happen if the Brightcove API is unavailable (even BC errors return a 200)
-          raise BrightcoveException, body + " (status code: #{header.status_code})"
-        end
-      end
     
   end
   
