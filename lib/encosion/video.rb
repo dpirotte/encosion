@@ -157,7 +157,6 @@ module Encosion
       
         # Creates a new Video object from a Ruby hash (used to create a video from a parsed API call)
         def parse(obj)
-          puts obj.inspect
           if obj
             args = {:id => obj['id'].to_i,
                     :name => obj['name'],
