@@ -44,14 +44,16 @@ module Encosion
         else        find_from_ids(args,options)
         end
       end
+      
         
       # This is an alias for find(:all)
       def all(*args)
         find(:all, *args)
       end
+      
 
       # Performs an HTTP GET
-      def get(server,port,path,secure,command,options)
+      def get(server,port,secure,path,command,options)
         http = HTTPClient.new
         url = secure ? 'https://' : 'http://'
         url += "#{server}:#{port}#{path}"
@@ -71,14 +73,15 @@ module Encosion
         return body
       end
       
+      
       # Performs an HTTP POST
-      def post(server,port,path,secure,command,options,instance)
+      def post(server,port,secure,path,command,options,instance)
         http = HTTPClient.new
         url = secure ? 'https://' : 'http://'
         url += "#{server}:#{port}#{path}"
-
+        
         content = { 'json' => { 'method' => command, 'params' => options }.to_json }    # package up the variables as a JSON-RPC string
-        content.merge!({ 'file' => instance.file }) if instance.respond_to?('file')                    # and add a file if there is one
+        content.merge!({ 'file' => instance.file }) if instance.respond_to?('file')             # and add a file if there is one
 
         response = http.post(url, content)
         # get the header and body for error checking
@@ -89,6 +92,7 @@ module Encosion
         # if we get here then no exceptions were raised
         return body
       end
+      
       
       # Checks the HTTP response and handles any errors
       def error_check(header,body)

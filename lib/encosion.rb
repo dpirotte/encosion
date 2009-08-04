@@ -17,38 +17,26 @@ require 'encosion/exceptions'
 
 module Encosion
   
-  VERSION = '0.1.3'
+  VERSION = '0.3.0'
   LOGGER = Logger.new(STDOUT)
   
-  def self.new(*args)
-    Engine.new(*args)
-  end
+  SERVER = 'api.brightcove.com'
+  PORT = 80
+  SECURE = false
+  READ_PATH = '/services/library'
+  WRITE_PATH = '/services/post'
+  DEFAULT_OPTIONS = { :debug => false }
   
-  class Engine
-    
-    SERVER = 'api.brightcove.com'
-    PORT = 80
-    PATH = '/services/library'
-    SECURE = false
-    DEFAULT_ARGS = { :read_token => nil, :write_token => nil }
-    DEFAULT_OPTIONS = { :debug => false }
-    
-    attr_reader :read_token, :write_token
-    
-    def initialize(options={})
-      @options = DEFAULT_OPTIONS.merge(options)
-      @options[:read_token] = @options[:token] if @options[:token]  # if there's only one token, assume it's a read
-      @read_token = @options[:read_token]
-      @write_token = @options[:write_token]
-      if @read_token.nil? && @write_token.nil?
-        raise EncosionError::TokenMissing, 'You must provide either a read or write token to use the Brightcove API'
-      end
-      
-      #@http = Net::HTTP.new(SERVER, PORT)
-      #@http.use_ssl = SECURE
-      #@http.set_debug_output $stdout if @options[:debug]
-    end
-    
-  end
+  @options = {  :read_token => nil, 
+                :write_token => nil, 
+                :server => SERVER, 
+                :port => PORT, 
+                :secure => SECURE, 
+                :read_path => READ_PATH, 
+                :write_path => WRITE_PATH }
+  attr_accessor :options
+  
+  # make @options available so it can be set externally when using the library
+  extend self
   
 end

@@ -2,11 +2,11 @@ module Encosion
   
   class Video < Base
     
-    SERVER = 'api.brightcove.com'
-    PORT = 80
-    SECURE = false
-    READ_PATH = '/services/library'
-    WRITE_PATH = '/services/post'
+    # SERVER = 'api.brightcove.com'
+    # PORT = 80
+    # SECURE = false
+    # READ_PATH = '/services/library'
+    # WRITE_PATH = '/services/post'
     ENUMS = { :economics => { :free => 'FREE', :ad_supported => 'AD_SUPPORTED'}}
     
     attr_accessor(:name, 
@@ -49,11 +49,11 @@ module Encosion
             raise AssetNotFound, "Couldn't find #{self.class} without a reference ID"
           when 1
             options.merge!({:reference_id => ids.first})
-            response = get(SERVER,PORT,READ_PATH,SECURE,'find_video_by_reference_id',options)
+            response = read('find_video_by_reference_id',options)
             return self.parse(response)
           else
             options.merge!({:reference_ids => ids.join(',')})
-            response = get(SERVER,PORT,READ_PATH,SECURE,'find_videos_by_reference_ids',options)
+            response = read('find_videos_by_reference_ids',options)
             return response['items'].collect { |item| self.parse(item) }
           end
       end
@@ -66,7 +66,7 @@ module Encosion
         text = args.flatten.compact.uniq
         raise AssetNotFound, "Couldn't find #{self.class} without text" if text == ''
         options.merge!({:text => text.first})
-        if response = get(SERVER,PORT,READ_PATH,SECURE,'find_videos_by_text',options)
+        if response = read('find_videos_by_text',options)
           return response['items'].collect { |item| self.parse(item) }
         else
           nil
@@ -80,7 +80,7 @@ module Encosion
       def find_related(*args)
         options = extract_options(args)
         raise AssetNotFound, "Cannot find related #{self.class}s without a video_id or reference_id" if options[:video_id].nil? && options[:reference_id].nil?
-        if response = get(SERVER,PORT,READ_PATH,SECURE,'find_related_videos',options)
+        if response = read('find_related_videos',options)
           return response['items'].collect { |item| self.parse(item) }
         else
           return nil
@@ -100,7 +100,7 @@ module Encosion
             raise AssetNotFound, "Couldn't find #{self.class} without tags"
           else
             options.merge!({:and_tags => tags.join(',')})
-            if response = get(SERVER,PORT,READ_PATH,SECURE,'find_videos_by_tags',options)
+            if response = read('find_videos_by_tags',options)
               return response['items'].collect { |item| self.parse(item) }
             else
               return nil
@@ -124,18 +124,45 @@ module Encosion
           options.merge!({:video_id => id})
         end
         
-        if response = Video.post(SERVER,PORT,WRITE_PATH,SECURE,'get_upload_status',options,self)
+        if response = write('get_upload_status',options)
           return response['result'].downcase.to_sym
         else
           return nil
         end
+      end
+      
+      
+      # the actual method that calls a get (user can use this directly if they want to call a method that's not included here)
+      def read(method,options)
+        # options.merge!(Encosion.options)
+        options.merge!({:token => Encosion.options[:read_token]}) unless options[:token]
+        get(  Encosion.options[:server],
+              Encosion.options[:port],
+              Encosion.options[:secure],
+              Encosion.options[:read_path],
+              method,
+              options)
+      end
+      
+      
+      # the actual method that calls a post (user can use this directly if they want to call a method that's not included here)
+      def write(method,options)
+        # options.merge!(Encosion.options)
+        options.merge!({:token => Encosion.options[:write_token]}) unless options[:token]
+        Video.post( Encosion.options[:server],
+                    Encosion.options[:port],
+                    Encosion.options[:secure],
+                    Encosion.options[:write_path],
+                    method,
+                    options,
+                    self)
       end
 
       protected
         # Find some videos by ids
         def find_one(id, options)
           options.merge!({:video_id => id})
-          response = get(SERVER,PORT,READ_PATH,SECURE,'find_video_by_id',options)
+          response = read('find_video_by_id',options)
           return self.parse(response)
         end
       
@@ -143,17 +170,17 @@ module Encosion
         # Find mutliple videos by id
         def find_some(ids, options)
           options.merge!({:video_ids => ids.join(',')})
-          response = get(SERVER,PORT,READ_PATH,SECURE,'find_videos_by_ids',options)
+          response = read('find_videos_by_ids',options)
           return response['items'].collect { |item| self.parse(item) }
         end
       
       
         # Find all videos
         def find_all(options)
-          response = get(SERVER,PORT,READ_PATH,SECURE,'find_all_videos',options)
+          response = read('find_all_videos', options)
           return response['items'].collect { |item| self.parse(item) }
         end
-
+        
       
         # Creates a new Video object from a Ruby hash (used to create a video from a parsed API call)
         def parse(obj)
@@ -216,7 +243,14 @@ module Encosion
       # check to make sure we have everything needed for a create_video call
       raise NoFile, "You need to attach a file to this video before you can upload it: Video.file = File.new('/path/to/file')" if @file.nil?
       options = args.merge({ 'video' => self.to_brightcove })   # take the parameters of this video and make them a valid video object for upload
-      response = Video.post(SERVER,PORT,WRITE_PATH,SECURE,'create_video',options,self)
+      options.merge!({:token => Encosion.options[:write_token]}) unless options[:token]
+      response = Video.post(Encosion.options[:server],
+                            Encosion.options[:port],
+                            Encosion.options[:secure],
+                            Encosion.options[:write_path],
+                            'create_video',
+                            options,
+                            self)
       return response['result']    # returns the Brightcove ID of the video that was just uploaded
     end
     
@@ -241,6 +275,7 @@ module Encosion
         :plays_total => @plays_total,
         :plays_trailing_week => @plays_trailing_week }.to_json
     end
+    
     
     # Outputs the video object into Brightcove's expected format
     def to_brightcove
