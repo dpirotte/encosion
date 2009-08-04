@@ -1,5 +1,8 @@
 module Encosion
   
+  # Raised if you try to set an invalid economics value
+  class InvalidEconomicsValue < StandardError; end;
+  
   class Video < Base
     
     ENUMS = { :economics => { :free => 'FREE', :ad_supported => 'AD_SUPPORTED'}}
@@ -32,8 +35,8 @@ module Encosion
       
       # Find a video by reference_id. Invokes Brightcove Media API command 'find_video_by_reference_id' or
       # 'find_videos_by_reference_ids' depending on whether you call one or multiple ids
-      #   Encosion::Video.find_by_reference_id('mycompany_1',:token => 'asdf')
-      #   Encosion::Video.find_by_reference_id('mycompany_1','mycompany_2','mycompany_3',:token => 'asdf')
+      #   Encosion::Video.find_by_reference_id('mycompany_1')
+      #   Encosion::Video.find_by_reference_id('mycompany_1','mycompany_2','mycompany_3')
       
       def find_by_reference_id(*args)
         options = extract_options(args)
@@ -54,7 +57,7 @@ module Encosion
       end
       
       # Find a video by text search. Invokes Brightcove Media API command 'find_videos_by_text'
-      #   Encosion::Video.find_by_text('funny videos',:token => 'asdf')
+      #   Encosion::Video.find_by_text('funny videos')
       
       def find_by_text(*args)
         options = extract_options(args)
@@ -70,7 +73,7 @@ module Encosion
       
 
       # Find videos related to the given video_id. Invokes Brightcove Media API command 'find_related_videos'
-      #   Encosion::Video.find_related(123456,:token => 'asdf')
+      #   Encosion::Video.find_related(123456)
       
       def find_related(*args)
         options = extract_options(args)
@@ -84,7 +87,7 @@ module Encosion
       
       
       # Find a video by tag search. Invokes Brightcove Media API command 'find_videos_by_tags'
-      #   Encosion::Video.find_by_tags('bloopers','gagreel','funny',:token => 'asdf')
+      #   Encosion::Video.find_by_tags('bloopers','gagreel','funny')
       
       def find_by_tags(*args)
         options = extract_options(args)
@@ -223,7 +226,7 @@ module Encosion
       @thumbnail_url = args[:thumbnail_url]
       @reference_id = args[:reference_id]
       @length = args[:length]
-      @economics = args[:economics]
+      @economics = self.economics = args[:economics]
       @plays_total = args[:plays_total]
       @plays_trailing_week = args[:plays_trailing_week]
       @file = args[:file]
@@ -286,11 +289,13 @@ module Encosion
     
     
     # Makes sure that the economics set on this video is one of a predetermined list
-    def encosion=(sym)
-      if ENUMS[:economics].has_key?(sym)
-        raise EncosionError::InvalidEconomicsValue, "A video's economics value must be one of #{ENUMS[:economics].collect { |key,value| e.key }.join(',')}"
-      else
-        @economics = sym
+    def economics=(sym)
+      unless sym.nil?
+        unless ENUMS[:economics].has_key?(sym)
+          raise InvalidEconomicsValue, "A video's economics value must be one of #{ENUMS[:economics].collect { |key,value| key.inspect }.join(', ')}"
+        else
+          @economics = sym
+        end
       end
     end
     
