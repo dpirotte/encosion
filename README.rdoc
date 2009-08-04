@@ -8,6 +8,17 @@ To get the gem:
   
 = Usage
 
+First thing is first. Tell Encosion what your read and write API tokens are:
+
+  require 'rubygems'
+  require 'encosion'
+  
+  Encosion.options[:read_token] = '123abc'
+  Encosion.options[:write_token] = 'abc123'
+  
+You don't have to set these ahead of time, you can pass in the token with each request
+if you want, but do it here and you won't have to worry about it any more.
+
 Encosion has several class methods that are similar to those found in ActiveRecord
 for finding records. You'll pass a hash of options which correspond to those expected
 by Brightcove (see http://docs.brightcove.com/en/media/). All calls will require you
@@ -16,25 +27,27 @@ read or write methods.
 
 == Read Methods
 
-  require 'rubygems'
-  require 'encosion'
-  
   # find all videos, 25 at a time, and return the first page
-  videos = Encosion::Video.find(:all, :token => '123abc', :page_size => 25, :page_number => 1)
+  videos = Encosion::Video.find(:all, :page_size => 25, :page_number => 1)
   
   # find a single video by Brightcove video id
-  video = Encosion::Video.find(12345, :token => '123abc')
+  video = Encosion::Video.find(12345)
   
   # find several videos by their Brightcove video ids
-  videos = Encosion::Video.find(12345, 67890, 24680, :token => '123abc')
+  videos = Encosion::Video.find(12345, 67890, 24680)
   
   # find videos by your own reference id
-  video = Encosion::Video.find_by_reference_id('our_internal_id', :token => '123abc')
+  video = Encosion::Video.find_by_reference_id('our_internal_id')
   
-  # check the status of a video (technically this uses the write API so you need to provide your write token)
-  status = Encosion::Video.status(12345, :token => '123abc') # finds by Brightcove video_id
-  status = Encosion::Video.status('our_internal_id', :token => '123abc') # finds by reference_id (string instead of integer)
+  # check the status of a video (technically this uses the write API so it requires your write token)
+  status = Encosion::Video.status(12345) # finds by Brightcove video_id
+  status = Encosion::Video.status('our_internal_id') # finds by reference_id (string instead of integer)
   
+These examples all assume that you've set your :read_token (and :write_token, in the case of
+Video.status) ahead of time. If not you can simply include the token in your call:
+
+  videos = Encosion::Video.find(:all, :page_size => 25, :page_number => 1, :token => '123abc')
+
 See Encosion::Video for all the available find methods and their variants.
 
 == Write Methods
@@ -42,13 +55,15 @@ See Encosion::Video for all the available find methods and their variants.
 To write a video to Brightcove you will instantiate Encosion::Video, set a few required fields
 and then save it:
 
-  require 'rubygems'
-  require 'encosion'
-  
   new_video = Encosion::Video.new(:file => File.new('/path/to/file'), :name => "My Awesome Video", :short_description => "A video of some awesome happenings", :tags => ['awesome','sweet'])
-  brightcove_id = new_video.save(:token => '123abc')
+  brightcove_id = new_video.save
   
 The save() method returns Brightcove's ID for the video (assuming the save was successful).
+
+Again, the above examples assume that you've pre-set your :write_token. If not, just include it
+in the save() call:
+
+  brightcove_id = new_video.save(:token => 'abc123')
   
 Brightcove requires a name and short description before it will let you save a video. The fields 
 that you can set are those that Brightcove considers writable:
@@ -62,10 +77,9 @@ that you can set are those that Brightcove considers writable:
 * reference_id (string)
 * economics (enumerable, either :free or :ad_supported)
 
-And of course the video file itself.
+And of course the video file itself. Just give :file a File object.
 
 = To Do
 
 * Implement the remaining Video write methods: update_video, delete_video, share_video, add_image
 * Implement the Playlist API read/write methods
-* Create a persistent config store so you can set the tokens once instead of on each method call

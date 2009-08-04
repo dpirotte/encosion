@@ -2,11 +2,6 @@ module Encosion
   
   class Video < Base
     
-    # SERVER = 'api.brightcove.com'
-    # PORT = 80
-    # SECURE = false
-    # READ_PATH = '/services/library'
-    # WRITE_PATH = '/services/post'
     ENUMS = { :economics => { :free => 'FREE', :ad_supported => 'AD_SUPPORTED'}}
     
     attr_accessor(:name, 
